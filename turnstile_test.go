@@ -62,8 +62,9 @@ func (m Meow) Cleanup(channels *ChannelMap) {
 func TestNewManager(t *testing.T) {
 
 	var operations []Scalable
+	iterations := 25
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < iterations; i++ {
 		operations = append(operations, Meow{
 			Number: 10,
 			Text:   "I am a kitty cat, and I dance, dance, dance",
@@ -71,7 +72,7 @@ func TestNewManager(t *testing.T) {
 		})
 	}
 
-	manager := NewManager(operations, uint64(len(operations)), uint64(5))
+	manager := NewManager(operations, uint64(10))
 
 	go manager.Execute()
 
@@ -91,9 +92,9 @@ func TestNewManager(t *testing.T) {
 			}
 
 			if manager.isComplete() {
-				assert.GreaterOrEqual(t, len(manager.ErrorList), 1)          //At least one error should have occurred
-				assert.Equal(t, uint64(5), manager.Completed+manager.Errors) //Verify the total execution count matches iterations
-				assert.Equal(t, uint64(5), manager.Iterations)               //Verify iterations matches what we supplied to the manager
+				assert.GreaterOrEqual(t, len(manager.ErrorList), 1)                   //At least one error should have occurred
+				assert.Equal(t, uint64(iterations), manager.Completed+manager.Errors) //Verify the total execution count matches iterations
+				assert.Equal(t, uint64(iterations), manager.Iterations)               //Verify iterations matches what we supplied to the manager
 				wg.Done()
 				return
 			}

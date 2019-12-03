@@ -49,11 +49,11 @@ type OperationInputs struct {
 }
 
 //NewManager takes a few configuration options and prepares your work manager
-func NewManager(operations []Scalable, iterations uint64, concurrency uint64) *Manager {
+func NewManager(operations []Scalable, concurrency uint64) *Manager {
 	m := Manager{
 		Operations:  operations,
 		Concurrency: concurrency,
-		Iterations:  iterations,
+		Iterations:  uint64(len(operations)),
 	}
 
 	m.Work = make(chan Scalable, m.Iterations)
