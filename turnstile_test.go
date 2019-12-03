@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -32,7 +33,7 @@ func (m Meow) Work(channels *ChannelMap) {
 	if morerandom%2 == 0 {
 		//Random error condition
 		ce := ConcurrentError{
-			RunIdentifier: random,
+			RunIdentifier: strconv.Itoa(random),
 			Notes:         "A planned error occurred",
 			Error:         errors.New("A miscellaneous error has teh occurred"),
 		}

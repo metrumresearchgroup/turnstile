@@ -28,7 +28,7 @@ type Manager struct {
 
 //ConcurrentError is used to place onto channels to keep track of errors generated in concurrency
 type ConcurrentError struct {
-	RunIdentifier int
+	RunIdentifier string //Should be string to allow for flexibility of names / guids
 	Notes         string
 	Error         error
 }
