@@ -86,7 +86,7 @@ func (m *Manager) Execute() {
 			}
 
 			//Breakcondition for the routine
-			if m.isComplete() {
+			if m.IsComplete() {
 				break
 			}
 
@@ -106,14 +106,14 @@ func (m *Manager) Execute() {
 				atomic.AddUint64(&m.Completed, 1)
 				//Decrement Working
 				atomic.AddUint64(&m.Working, ^uint64(0))
-				if m.isComplete() {
+				if m.IsComplete() {
 					break
 				}
 
 			case <-m.Channels.Failed:
 				atomic.AddUint64(&m.Errors, 1)
 				atomic.AddUint64(&m.Working, ^uint64(0))
-				if m.isComplete() {
+				if m.IsComplete() {
 					break
 				}
 
@@ -130,6 +130,7 @@ func (m *Manager) Execute() {
 	}
 }
 
-func (m *Manager) isComplete() bool {
+//IsComplete simply returns a bool indication as to whether or not work for the manager has been completed
+func (m *Manager) IsComplete() bool {
 	return m.Completed+m.Errors >= m.Iterations
 }

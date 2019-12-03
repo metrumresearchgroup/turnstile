@@ -91,7 +91,7 @@ func TestNewManager(t *testing.T) {
 				t.Errorf("We're not effectively queuing. We have %d workers when we should only have %d", manager.Working, manager.Concurrency)
 			}
 
-			if manager.isComplete() {
+			if manager.IsComplete() {
 				assert.GreaterOrEqual(t, len(manager.ErrorList), 1)                   //At least one error should have occurred
 				assert.Equal(t, uint64(iterations), manager.Completed+manager.Errors) //Verify the total execution count matches iterations
 				assert.Equal(t, uint64(iterations), manager.Iterations)               //Verify iterations matches what we supplied to the manager
