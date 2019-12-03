@@ -16,7 +16,7 @@ type Scalable interface {
 //Manager is what we will create first. It's the struct that will contain the details of the operations, total operational status, and the results
 type Manager struct {
 	Iterations  uint64
-	Operation   Scalable
+	Operations  []Scalable
 	Working     uint64
 	Completed   uint64
 	Errors      uint64
@@ -49,9 +49,9 @@ type OperationInputs struct {
 }
 
 //NewManager takes a few configuration options and prepares your work manager
-func NewManager(operation Scalable, iterations uint64, concurrency uint64) *Manager {
+func NewManager(operations []Scalable, iterations uint64, concurrency uint64) *Manager {
 	m := Manager{
-		Operation:   operation,
+		Operations:  operations,
 		Concurrency: concurrency,
 		Iterations:  iterations,
 	}
@@ -123,10 +123,11 @@ func (m *Manager) Execute() {
 		}
 	}()
 
-	for i := uint64(0); i < m.Iterations; i++ {
-		m.Work <- m.Operation
-	}
+	//Iterate over the scalables and put them onto the queue
 
+	for _, v := range m.Operations {
+		m.Work <- v
+	}
 }
 
 func (m *Manager) isComplete() bool {

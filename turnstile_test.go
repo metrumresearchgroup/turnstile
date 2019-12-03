@@ -8,6 +8,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type Meow struct {
@@ -59,13 +61,17 @@ func (m Meow) Cleanup(channels *ChannelMap) {
 
 func TestNewManager(t *testing.T) {
 
-	m := Meow{
-		Number: 10,
-		Text:   "I am a kitty cat, and I dance, dance, dance",
-		Other:  5,
+	var operations []Scalable
+
+	for i := 0; i < 5; i++ {
+		operations = append(operations, Meow{
+			Number: 10,
+			Text:   "I am a kitty cat, and I dance, dance, dance",
+			Other:  5,
+		})
 	}
 
-	manager := NewManager(m, 500, 100)
+	manager := NewManager(operations, uint64(len(operations)), uint64(5))
 
 	go manager.Execute()
 
@@ -85,9 +91,9 @@ func TestNewManager(t *testing.T) {
 			}
 
 			if manager.isComplete() {
-				if len(manager.ErrorList) == 0 {
-					t.Errorf("We should have a 50 percent probability of generating errors throughout this test")
-				}
+				assert.GreaterOrEqual(t, len(manager.ErrorList), 1)          //At least one error should have occurred
+				assert.Equal(t, uint64(5), manager.Completed+manager.Errors) //Verify the total execution count matches iterations
+				assert.Equal(t, uint64(5), manager.Iterations)               //Verify iterations matches what we supplied to the manager
 				wg.Done()
 				return
 			}
