@@ -96,6 +96,7 @@ func (m *Manager) Execute() {
 
 	//Separate goroutine to listen for results (non blocking)
 	go func() {
+		minimalValue := uint64(0)
 		for {
 			select {
 			//Actually do the work off the channel. This should be buffered.
@@ -112,7 +113,12 @@ func (m *Manager) Execute() {
 
 			case <-m.Channels.Failed:
 				atomic.AddUint64(&m.Errors, 1)
-				atomic.AddUint64(&m.Working, ^uint64(0))
+
+				//Only decrement if value is actually above failure point.
+				if m.Working > minimalValue {
+					atomic.AddUint64(&m.Working, ^uint64(0))
+				}
+
 				if m.IsComplete() {
 					break
 				}
