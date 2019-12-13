@@ -96,7 +96,6 @@ func (m *Manager) Execute() {
 
 	//Separate goroutine to listen for results (non blocking)
 	go func() {
-		minimalValue := uint64(0)
 		for {
 			select {
 			//Actually do the work off the channel. This should be buffered.
@@ -113,11 +112,6 @@ func (m *Manager) Execute() {
 
 			case <-m.Channels.Failed:
 				atomic.AddUint64(&m.Errors, 1)
-
-				//Only decrement if value is actually above failure point.
-				if m.Working > minimalValue {
-					atomic.AddUint64(&m.Working, ^uint64(0))
-				}
 
 				if m.IsComplete() {
 					break
@@ -138,5 +132,5 @@ func (m *Manager) Execute() {
 
 //IsComplete simply returns a bool indication as to whether or not work for the manager has been completed
 func (m *Manager) IsComplete() bool {
-	return m.Completed+m.Errors >= m.Iterations
+	return m.Completed >= m.Iterations
 }
