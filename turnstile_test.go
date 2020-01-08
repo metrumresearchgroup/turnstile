@@ -18,6 +18,7 @@ type Meow struct {
 	Number int
 	Text   string
 	Other  int
+	Cancel chan bool
 }
 
 func (m Meow) Prepare(channels *ChannelMap) {
@@ -66,6 +67,17 @@ type Woof struct {
 	Number int
 	Text   string
 	Other  int
+	Cancel chan bool
+}
+
+func (m Meow) CancellationChannel() chan bool {
+	m.Cancel = make(chan bool)
+	return m.Cancel
+}
+
+func (m Woof) CancellationChannel() chan bool {
+	m.Cancel = make(chan bool)
+	return m.Cancel
 }
 
 func (m Woof) Prepare(channels *ChannelMap) {
@@ -212,4 +224,179 @@ func TestErrors(t *testing.T) {
 
 	wg.Wait()
 
+}
+
+type canceller struct {
+	Cancel chan bool
+}
+
+func (c canceller) Prepare(ch *ChannelMap){
+	//Cancel
+	ch.Working <- 1
+	c.Cancel <- true //The counter should remain 0 at this point
+	println("Cancelled the thing")
+}
+
+func (c canceller) Work(ch *ChannelMap){
+	counter++
+	println("working")
+}
+
+func (c canceller) Monitor(ch *ChannelMap){
+	counter++
+	println("Monitoring")
+}
+
+func (c canceller) Cleanup( ch *ChannelMap){
+	counter++
+	println("Cleanup")
+}
+
+func (c canceller) CancellationChannel() chan bool {
+	return c.Cancel
+}
+
+var counter int
+
+
+func TestCancellationOfFuturePhasesEarly(t *testing.T) {
+	var operations []Scalable
+	counter = 0
+
+	canceller := canceller{
+		Cancel: CancellationChannel(),
+	}
+
+	//Add it to work list
+	operations = append(operations,canceller)
+
+	manager := NewManager(operations, uint64(10))
+
+	go manager.Execute()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+
+	ctx.Done()
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	go func(ctx context.Context, t *testing.T) {
+		for {
+			println(manager.Working)
+			time.Sleep(2 * time.Second)
+
+
+			if manager.IsComplete() {
+				assert.Equal(t,0,counter)
+				wg.Done()
+				return
+			}
+
+			//Look for cancellation
+			go func(ctx context.Context) {
+				select {
+				case <-ctx.Done():
+					t.Errorf("Operation timed out. Look for leaks")
+					wg.Done()
+					cancel()
+					return
+				}
+			}(ctx)
+		}
+	}(ctx, t)
+
+	for !manager.IsComplete() {
+		log.Printf("Manager has %d working, %d errors, %d completed", manager.Working, manager.Errors, manager.Completed)
+	}
+
+	wg.Wait()
+}
+
+
+type midCanceller struct {
+	Cancel chan bool
+}
+
+func (c midCanceller) Prepare(ch *ChannelMap){
+	//Cancel
+	ch.Working <- 1
+	counter++
+	println("preparation")
+}
+
+func (c midCanceller) Work(ch *ChannelMap){
+	counter++
+	println("working")
+}
+
+func (c midCanceller) Monitor(ch *ChannelMap){
+	c.Cancel <- true
+	println("Cancelled at monitoring")
+}
+
+func (c midCanceller) Cleanup( ch *ChannelMap){
+	counter++
+	println("Cleanup")
+}
+
+func (c midCanceller) CancellationChannel() chan bool {
+	return c.Cancel
+}
+
+
+func TestCancellationOfFuturePhasesMiddle(t *testing.T) {
+	counter = 0
+	var operations []Scalable
+
+	canceller := midCanceller{
+		Cancel: CancellationChannel(),
+	}
+
+	//Add it to work list
+	operations = append(operations,canceller)
+
+	manager := NewManager(operations, uint64(10))
+
+	go manager.Execute()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+
+	ctx.Done()
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	go func(ctx context.Context, t *testing.T) {
+		for {
+			println(manager.Working)
+			time.Sleep(2 * time.Second)
+
+
+			if manager.IsComplete() {
+				assert.Equal(t,2,counter)
+				wg.Done()
+				return
+			}
+
+			//Look for cancellation
+			go func(ctx context.Context) {
+				select {
+				case <-ctx.Done():
+					t.Errorf("Operation timed out. Look for leaks")
+					wg.Done()
+					cancel()
+					return
+				}
+			}(ctx)
+		}
+	}(ctx, t)
+
+	for !manager.IsComplete() {
+		log.Printf("Manager has %d working, %d errors, %d completed", manager.Working, manager.Errors, manager.Completed)
+	}
+
+	wg.Wait()
 }
