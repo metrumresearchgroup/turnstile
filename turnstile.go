@@ -93,6 +93,10 @@ func (m *Manager) Execute() {
 						}
 
 						work.Cleanup(&m.Channels)
+
+						//Process cancellation channels one last time to look
+						//for failures in the cleanup phase.
+						isCancelled(cancellationChannel, &m.Channels)
 					}()
 				}
 			}
